@@ -47,8 +47,11 @@ function useToast() {
   const [msg, setMsg] = useState<{ kind: "info" | "error"; text: string } | null>(
     null,
   );
-  const show = (kind: "info" | "error", text: string) => setMsg({ kind, text });
-  const clear = () => setMsg(null);
+  const show = useCallback(
+    (kind: "info" | "error", text: string) => setMsg({ kind, text }),
+    [],
+  );
+  const clear = useCallback(() => setMsg(null), []);
   return { msg, show, clear };
 }
 
