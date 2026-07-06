@@ -24,9 +24,19 @@ export function getInjectedProvider(): Eip1193Provider | undefined {
   return window.ethereum;
 }
 
-// Read-only client - no wallet needed. Talks directly to the GenLayer RPC.
+// In the browser, route RPC through the same-origin proxy (/api/rpc) so requests
+// never hit the RPC domain directly. This avoids "Failed to fetch" errors from
+// privacy/ad/wallet extensions that block calls to crypto RPC hosts.
+function rpcEndpoint(): string {
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/api/rpc`;
+  }
+  return "https://rpc-bradbury.genlayer.com";
+}
+
+// Read-only client - no wallet needed.
 export function getReadClient() {
-  return createClient({ chain: testnetBradbury });
+  return createClient({ chain: testnetBradbury, endpoint: rpcEndpoint() });
 }
 
 // Write client - signs through the connected wallet.
@@ -36,6 +46,7 @@ export function getWriteClient(address: `0x${string}`) {
   return createClient({
     chain: testnetBradbury,
     account: address,
+    endpoint: rpcEndpoint(),
     // genlayer-js accepts an EIP-1193 provider for browser signing
     provider,
   });
