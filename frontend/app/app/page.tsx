@@ -61,6 +61,7 @@ export default function AppPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingVerdicts, setLoadingVerdicts] = useState(false);
   const { msg, show, clear } = useToast();
 
   const configured = Boolean(CONTRACT_ADDRESS);
@@ -70,7 +71,24 @@ export default function AppPage() {
     if (!configured || loadingRef.current) return; // never overlap loads
     loadingRef.current = true;
     setLoading(true);
+    setLoadingVerdicts(true);
     try {
+      // Load verdicts FIRST and show them as they arrive, so the feed fills in
+      // progressively instead of waiting for every read to finish.
+      const scount = Number((await readContract<number>("get_submission_count")) ?? 0);
+      const start = Math.max(0, scount - 10);
+      setSubmissions([]);
+      for (let i = scount - 1; i >= start; i--) {
+        try {
+          const s = await readContract<Submission>("get_submission", [BigInt(i)]);
+          setSubmissions((prev) => [...prev, s]);
+        } catch {
+          /* skip unreadable submission */
+        }
+      }
+      setLoadingVerdicts(false);
+
+      // Then load campaigns (used by the dropdown and the brand list).
       const count = (await readContract<number>("get_campaign_count")) ?? 0;
       const out: Campaign[] = [];
       for (let i = 0; i < Number(count); i++) {
@@ -81,20 +99,6 @@ export default function AppPage() {
         }
       }
       setCampaigns(out.reverse());
-
-      // Latest verdicts feed: fetch the most recent submissions (capped to keep
-      // gen_call usage low). Newest first.
-      const scount = Number((await readContract<number>("get_submission_count")) ?? 0);
-      const subs: Submission[] = [];
-      const start = Math.max(0, scount - 10);
-      for (let i = scount - 1; i >= start; i--) {
-        try {
-          subs.push(await readContract<Submission>("get_submission", [BigInt(i)]));
-        } catch {
-          /* skip unreadable submission */
-        }
-      }
-      setSubmissions(subs);
     } catch (e) {
       const msg = errText(e);
       show(
@@ -105,6 +109,7 @@ export default function AppPage() {
       );
     } finally {
       loadingRef.current = false;
+      setLoadingVerdicts(false);
       setLoading(false);
     }
   }, [configured, show]);
@@ -197,7 +202,11 @@ export default function AppPage() {
           />
         )}
 
-        <VerdictsFeed submissions={submissions} campaigns={campaigns} />
+        <VerdictsFeed
+          submissions={submissions}
+          campaigns={campaigns}
+          loading={loadingVerdicts}
+        />
       </div>
     </main>
   );
@@ -208,11 +217,13 @@ export default function AppPage() {
 function VerdictsFeed({
   submissions,
   campaigns,
+  loading,
 }: {
   submissions: Submission[];
   campaigns: Campaign[];
+  loading: boolean;
 }) {
-  if (submissions.length === 0) return null;
+  if (!loading && submissions.length === 0) return null;
   const titleFor = (id: number) =>
     campaigns.find((c) => c.id === id)?.title ?? `Campaign #${id}`;
   return (
@@ -251,7 +262,28 @@ function VerdictsFeed({
             </span>
           </Frame>
         ))}
+
+        {loading &&
+          Array.from({ length: 3 }).map((_, i) => (
+            <Frame
+              key={`sk-${i}`}
+              className="flex animate-pulse items-center gap-4 p-4"
+            >
+              <div className="h-7 w-20 rounded-sharp bg-paper-2" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 w-40 rounded bg-paper-2" />
+                <div className="h-3 w-24 rounded bg-paper-2" />
+              </div>
+              <div className="h-4 w-16 rounded bg-paper-2" />
+            </Frame>
+          ))}
       </div>
+
+      {loading && (
+        <p className="mt-3 animate-pulse font-mono text-xs text-ink-60">
+          Loading verdicts from the chain…
+        </p>
+      )}
     </section>
   );
 }
