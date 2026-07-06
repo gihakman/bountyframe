@@ -86,7 +86,7 @@ export default function AppPage() {
       // gen_call usage low). Newest first.
       const scount = Number((await readContract<number>("get_submission_count")) ?? 0);
       const subs: Submission[] = [];
-      const start = Math.max(0, scount - 5);
+      const start = Math.max(0, scount - 10);
       for (let i = scount - 1; i >= start; i--) {
         try {
           subs.push(await readContract<Submission>("get_submission", [BigInt(i)]));
