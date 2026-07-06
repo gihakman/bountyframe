@@ -73,16 +73,46 @@ function requireContract(): `0x${string}` {
 
 // --- Reads ---
 
+// GenLayer limits `gen_call` to ~2 requests/second per IP. Space read calls out
+// and retry with backoff when the limit is hit, so bursts (e.g. listing several
+// campaigns) stay under the cap and recover automatically.
+const MIN_READ_GAP_MS = 600;
+let lastReadAt = 0;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function throttleRead() {
+  const now = Date.now();
+  const wait = Math.max(0, lastReadAt + MIN_READ_GAP_MS - now);
+  if (wait > 0) await sleep(wait);
+  lastReadAt = Date.now();
+}
+
+function isRateLimit(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /rate limit|exceeds defined limit|-32429|\b429\b/i.test(msg);
+}
+
 export async function readContract<T = unknown>(
   functionName: string,
   args: CalldataEncodable[] = [],
 ): Promise<T> {
   const client = getReadClient();
-  return (await client.readContract({
-    address: requireContract(),
-    functionName,
-    args,
-  })) as T;
+  const address = requireContract();
+  const maxAttempts = 6;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    await throttleRead();
+    try {
+      return (await client.readContract({ address, functionName, args })) as T;
+    } catch (err) {
+      if (isRateLimit(err) && attempt < maxAttempts - 1) {
+        await sleep(800 * (attempt + 1)); // linear backoff: 0.8s, 1.6s, ...
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error("Read failed after retries");
 }
 
 // --- Writes ---
