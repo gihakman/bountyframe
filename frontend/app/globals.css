@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ink: #101014;
+  --paper: #f5f2e9;
+  --volt: #d6ff3e;
+  --coral: #ff5a36;
+}
+
+html {
+  background: var(--ink);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-feature-settings: "ss01", "cv01";
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Frame corner brackets - a signature motif */
+.bracket {
+  position: relative;
+}
+.bracket::before,
+.bracket::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: currentColor;
+  border-style: solid;
+}
+.bracket::before {
+  top: -1px;
+  left: -1px;
+  border-width: 2px 0 0 2px;
+}
+.bracket::after {
+  bottom: -1px;
+  right: -1px;
+  border-width: 0 2px 2px 0;
+}
+
+/* thin scanline texture for the dark hero, kept subtle */
+.scanlines {
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.03) 0,
+    rgba(255, 255, 255, 0.03) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+::selection {
+  background: var(--volt);
+  color: var(--ink);
+}
+
+@layer components {
+  .input {
+    @apply w-full rounded-sharp border-2 border-ink bg-paper px-3 py-2 font-mono text-sm text-ink outline-none placeholder:text-ink-60/60 focus:shadow-stamp-sm;
+  }
+}
