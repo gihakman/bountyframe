@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Frame, Label } from "@/components/Frame";
 import { Stamp } from "@/components/Stamp";
 import { Button } from "@/components/Button";
@@ -60,9 +60,11 @@ export default function AppPage() {
   const { msg, show, clear } = useToast();
 
   const configured = Boolean(CONTRACT_ADDRESS);
+  const loadingRef = useRef(false);
 
   const loadCampaigns = useCallback(async () => {
-    if (!configured) return;
+    if (!configured || loadingRef.current) return; // never overlap loads
+    loadingRef.current = true;
     setLoading(true);
     try {
       const count = (await readContract<number>("get_campaign_count")) ?? 0;
@@ -76,8 +78,15 @@ export default function AppPage() {
       }
       setCampaigns(out.reverse());
     } catch (e) {
-      show("error", errText(e));
+      const msg = errText(e);
+      show(
+        "error",
+        /rate limit|exceeds defined limit/i.test(msg)
+          ? "The network is busy. Please wait a moment and tap Refresh."
+          : msg,
+      );
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   }, [configured, show]);

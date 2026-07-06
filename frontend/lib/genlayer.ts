@@ -73,46 +73,58 @@ function requireContract(): `0x${string}` {
 
 // --- Reads ---
 
-// GenLayer limits `gen_call` to ~2 requests/second per IP. Space read calls out
-// and retry with backoff when the limit is hit, so bursts (e.g. listing several
-// campaigns) stay under the cap and recover automatically.
-const MIN_READ_GAP_MS = 600;
+// GenLayer limits `gen_call` to ~2 requests/second per IP. To stay under the cap
+// no matter how many callers fire at once, every read goes through ONE global
+// queue: a single request in flight at a time, spaced out, with backoff retries
+// when the limit is still hit.
+const MIN_READ_GAP_MS = 750;
 let lastReadAt = 0;
+let readQueue: Promise<unknown> = Promise.resolve();
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-async function throttleRead() {
-  const now = Date.now();
-  const wait = Math.max(0, lastReadAt + MIN_READ_GAP_MS - now);
-  if (wait > 0) await sleep(wait);
-  lastReadAt = Date.now();
-}
 
 function isRateLimit(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
   return /rate limit|exceeds defined limit|-32429|\b429\b/i.test(msg);
 }
 
+function scheduleRead<T>(job: () => Promise<T>): Promise<T> {
+  const result = readQueue.then(async () => {
+    const wait = Math.max(0, lastReadAt + MIN_READ_GAP_MS - Date.now());
+    if (wait > 0) await sleep(wait);
+    lastReadAt = Date.now();
+    return job();
+  });
+  // Keep the chain alive regardless of individual success/failure.
+  readQueue = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
+}
+
 export async function readContract<T = unknown>(
   functionName: string,
   args: CalldataEncodable[] = [],
 ): Promise<T> {
-  const client = getReadClient();
-  const address = requireContract();
-  const maxAttempts = 6;
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    await throttleRead();
-    try {
-      return (await client.readContract({ address, functionName, args })) as T;
-    } catch (err) {
-      if (isRateLimit(err) && attempt < maxAttempts - 1) {
-        await sleep(800 * (attempt + 1)); // linear backoff: 0.8s, 1.6s, ...
-        continue;
+  return scheduleRead(async () => {
+    const client = getReadClient();
+    const address = requireContract();
+    const maxAttempts = 6;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        return (await client.readContract({ address, functionName, args })) as T;
+      } catch (err) {
+        if (isRateLimit(err) && attempt < maxAttempts - 1) {
+          await sleep(1000 * (attempt + 1)); // 1s, 2s, 3s, ...
+          lastReadAt = Date.now();
+          continue;
+        }
+        throw err;
       }
-      throw err;
     }
-  }
-  throw new Error("Read failed after retries");
+    throw new Error("Read failed after retries");
+  });
 }
 
 // --- Writes ---
