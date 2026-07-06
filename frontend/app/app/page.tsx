@@ -56,6 +56,7 @@ export default function AppPage() {
   const [address, setAddress] = useState<`0x${string}` | null>(null);
   const [tab, setTab] = useState<"creator" | "brand">("creator");
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(false);
   const { msg, show, clear } = useToast();
 
@@ -77,6 +78,20 @@ export default function AppPage() {
         }
       }
       setCampaigns(out.reverse());
+
+      // Latest verdicts feed: fetch the most recent submissions (capped to keep
+      // gen_call usage low). Newest first.
+      const scount = Number((await readContract<number>("get_submission_count")) ?? 0);
+      const subs: Submission[] = [];
+      const start = Math.max(0, scount - 5);
+      for (let i = scount - 1; i >= start; i--) {
+        try {
+          subs.push(await readContract<Submission>("get_submission", [BigInt(i)]));
+        } catch {
+          /* skip unreadable submission */
+        }
+      }
+      setSubmissions(subs);
     } catch (e) {
       const msg = errText(e);
       show(
@@ -178,8 +193,63 @@ export default function AppPage() {
             reload={loadCampaigns}
           />
         )}
+
+        <VerdictsFeed submissions={submissions} campaigns={campaigns} />
       </div>
     </main>
+  );
+}
+
+/* ----------------------------- Latest verdicts ----------------------------- */
+
+function VerdictsFeed({
+  submissions,
+  campaigns,
+}: {
+  submissions: Submission[];
+  campaigns: Campaign[];
+}) {
+  if (submissions.length === 0) return null;
+  const titleFor = (id: number) =>
+    campaigns.find((c) => c.id === id)?.title ?? `Campaign #${id}`;
+  return (
+    <section className="mt-10">
+      <Label>Latest verdicts</Label>
+      <p className="mt-1 mb-4 text-sm text-ink-60">
+        Every decision is recorded on-chain by validator consensus. Here are the
+        most recent submissions.
+      </p>
+      <div className="space-y-3">
+        {submissions.map((s) => (
+          <Frame key={s.id} className="flex flex-wrap items-center gap-4 p-4">
+            <Stamp verdict={s.status} className="!animate-none" />
+            <div className="min-w-0 flex-1">
+              <div className="font-display text-sm font-bold tracking-tightest">
+                {titleFor(s.campaign_id)}
+              </div>
+              <div className="truncate font-mono text-xs text-ink-60">
+                submission #{s.id} · {shortAddr(s.creator)} · confidence {s.score}/100
+              </div>
+            </div>
+            <a
+              href={s.media_url}
+              target="_blank"
+              rel="noreferrer"
+              className="font-mono text-xs uppercase tracking-widest text-ink underline decoration-coral underline-offset-4 hover:text-coral"
+            >
+              View media
+            </a>
+            <span className="font-mono text-sm">
+              {s.status === "approved" ? (
+                <span className="text-ink">+{weiToGen(s.paid_amount)} GEN</span>
+              ) : (
+                <span className="text-coral">no payout</span>
+              )}
+            </span>
+          </Frame>
+        ))}
+      </div>
+    </section>
   );
 }
 
