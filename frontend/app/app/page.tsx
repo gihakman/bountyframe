@@ -246,8 +246,8 @@ function BrandPanel({
               placeholder="Show our can on a sunny beach. No competing brands visible. Bright, energetic tone."
             />
           </Field>
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Bounty per approval (GEN)">
+          <div className="grid grid-cols-2 items-end gap-4">
+            <Field label="Bounty (GEN)">
               <input
                 className="input"
                 inputMode="decimal"
@@ -255,7 +255,7 @@ function BrandPanel({
                 onChange={(e) => setBounty(e.target.value)}
               />
             </Field>
-            <Field label="Escrow deposit (GEN)">
+            <Field label="Deposit (GEN)">
               <input
                 className="input"
                 inputMode="decimal"
@@ -268,8 +268,9 @@ function BrandPanel({
             {busy ? "Working…" : address ? "Fund campaign" : "Connect to fund"}
           </Button>
           <p className="font-mono text-xs text-ink-60">
-            Deposit is escrowed on-chain. It must cover at least one bounty. Close
-            the campaign any time to reclaim the remainder.
+            Bounty is paid per approved submission. Deposit is escrowed on-chain and
+            must cover at least one bounty. Close the campaign any time to reclaim
+            the remainder.
           </p>
         </div>
       </Frame>
