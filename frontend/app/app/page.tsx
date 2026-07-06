@@ -17,6 +17,7 @@ import {
   readContract,
   writeContract,
   waitAccepted,
+  getInjectedProvider,
 } from "@/lib/genlayer";
 
 type Campaign = {
@@ -127,6 +128,21 @@ export default function AppPage() {
     }
   };
 
+  const onDisconnect = async () => {
+    // Best-effort: revoke the dApp's account permission where the wallet
+    // supports it, then clear local connection state.
+    try {
+      await getInjectedProvider()?.request({
+        method: "wallet_revokePermissions",
+        params: [{ eth_accounts: {} }],
+      });
+    } catch {
+      /* wallet may not support revoke; clearing local state is enough */
+    }
+    setAddress(null);
+    show("info", "Wallet disconnected.");
+  };
+
   return (
     <main className="min-h-screen">
       <header className="border-b-2 border-ink bg-ink text-paper">
@@ -148,9 +164,15 @@ export default function AppPage() {
               {NETWORK.name}
             </span>
             {address ? (
-              <span className="rounded-sharp border-2 border-volt px-3 py-1.5 font-mono text-xs text-volt">
-                {shortAddr(address)}
-              </span>
+              <button
+                onClick={onDisconnect}
+                title="Disconnect wallet"
+                className="group inline-flex items-center gap-2 rounded-sharp border-2 border-volt px-3 py-1.5 font-mono text-xs text-volt transition-colors hover:border-coral hover:text-coral"
+              >
+                <span className="h-2 w-2 rounded-full bg-volt group-hover:bg-coral" />
+                <span className="group-hover:hidden">{shortAddr(address)}</span>
+                <span className="hidden group-hover:inline">Disconnect</span>
+              </button>
             ) : (
               <Button variant="volt" onClick={onConnect} className="!px-4 !py-2">
                 Connect wallet
