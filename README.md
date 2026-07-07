@@ -89,7 +89,7 @@ exercise the campaign logic, payouts, and access control without a network.
 
 ## Frontend
 
-Requires Node.js 18 or newer.
+Requires Node.js 18 or newer. 
 
 ```bash
 cd frontend
