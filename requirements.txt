@@ -1,3 +1,4 @@
 # BountyFrame contract dev/test dependencies (Python 3.12+)
 genlayer-test==0.29.2
 genvm-linter
+ 
