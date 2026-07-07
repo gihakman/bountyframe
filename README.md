@@ -8,7 +8,7 @@ media, evaluates it against the guidelines, and releases the bounty when the
 validators agree. There is no account manager reviewing submissions by hand.
 
 ## Live on GenLayer Bradbury
-
+ 
 | | |
 |---|---|
 | Contract | [`0x857B95185f5e4192097b2E6E80A437F14e3FF5f7`](https://explorer-bradbury.genlayer.com/address/0x857B95185f5e4192097b2E6E80A437F14e3FF5f7) |
