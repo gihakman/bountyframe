@@ -1,32 +1,35 @@
-# Secrets — never commit
+# Environment
 .env
 .env.*
 !.env.example
 
-# Agent/config and internal notes — not part of the shipped dApp
-.kiro/
-*.md.bak
-dapp-*.md
-memory.md
-progress.md
-visual-identity.md
+# Node / Next.js
+node_modules/
+dist/
+build/
+.next/
+out/
+.vercel/
+*.tsbuildinfo
 
 # Python
-.venv*
+.venv/
+venv/
 __pycache__/
 .pytest_cache/
 *.pyc
 
-# Node / Next.js
-node_modules/
-dist/
-.next/
-out/
-*.tsbuildinfo
-
-# Build & logs
+# Artifacts / cache / coverage
 artifacts/
+cache/
+.cache/
+coverage/
+
+# Logs
 *.log
 
-# OS / editor
+# Editor / OS
 .DS_Store
+Thumbs.db
+.vscode/
+.idea/

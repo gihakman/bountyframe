@@ -1,7 +1,7 @@
 """Direct-mode tests for the BountyFrame intelligent contract.
 
 Run: pytest tests/direct/ -v
-These run in-memory (no server). The vision LLM and media fetch are mocked, so
+These run in-memory (no server). The vision model and media fetch are mocked, so
 they exercise business logic, state transitions, payouts, and access control.
 Validator consensus is exercised separately in integration tests.
 """

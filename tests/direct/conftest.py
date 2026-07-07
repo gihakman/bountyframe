@@ -5,7 +5,7 @@ from pathlib import Path
 # repo root = tests/direct/conftest.py -> parents[2]
 CONTRACT = str(Path(__file__).resolve().parents[2] / "contracts" / "bounty_frame.py")
 
-# 1x1 PNG bytes are irrelevant in direct mode (the LLM is mocked); any body works.
+# 1x1 PNG bytes are irrelevant in direct mode (the model is mocked); any body works.
 FAKE_IMAGE_BODY = b"\x89PNG\r\n\x1a\n-fake-image-bytes"
 
 
@@ -18,7 +18,7 @@ def mock_media_ok(direct_vm, url_pattern: str = r".*"):
 
 
 def mock_verdict(direct_vm, compliant: bool, score: int = 90, reason: str = "ok"):
-    """Mock the vision LLM verdict for the evaluation prompt."""
+    """Mock the vision model verdict for the evaluation prompt."""
     direct_vm.mock_llm(
         r".*brand-safety reviewer.*",
         json.dumps({"compliant": compliant, "score": score, "reason": reason}),

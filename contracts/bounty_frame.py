@@ -7,9 +7,9 @@ import typing
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-# Error classification prefixes (see write-contract skill).
-# Deterministic errors must match across validators; transient may both fail;
-# LLM errors force a leader rotation.
+# Error classification prefixes.
+# Deterministic errors must match across validators; transient errors may both
+# fail; malformed model output forces a leader rotation.
 ERROR_EXPECTED = "[EXPECTED]"    # business logic (deterministic)
 ERROR_EXTERNAL = "[EXTERNAL]"    # external 4xx (deterministic)
 ERROR_TRANSIENT = "[TRANSIENT]"  # network / 5xx (non-deterministic)
